@@ -4,9 +4,20 @@ The project aims to compare the standing of Walmart, Costco, Kroger and Target b
 organizations and to predict the future price values using Autoregressive Integrated Moving Average (ARIMA) models for these
 stock prices.
 
+● The extarcted data for Walmart can be found in : Walmart_data.csv <br>
+● The extarcted data for Costco can be found in : Costco_data.csv <br>
+● The extarcted data for Kroger can be found in : Kroggers_data.csv <br>
+● The extarcted data for Target can be found in : Target_data.csv <br>
+
+● The RMD file for Walmart can be found in : time_Series_Walmart.Rmd<br>
+● The RMD file for Costco can be found in : time_Series_Costco.Rmd <br>
+● The RMD file for Kroger can be found in :time_Series_Kroggers.Rmd <br>
+● The RMD file for for Target can be found in : time_Series_Target.Rmd <br>
+
+
 (Refer the report Project_final.pdf for complete explaination of each steps and conclusion reached, please go through appendix to understand the analysis completely)
 
-# The methodology is explained here as:
+# The methodology is explained below:
 ● Getting the Data: Monthly closing stock prices are collected for the past 15 years for these four companies and stored in a
 tidy data format which is manipulated for further analysis. <br>
 ● Exploratory data analysis: Visual analysis of data pattern and central tendency statistics are observed along with a
@@ -23,7 +34,7 @@ predicting the stock prices for next three years and performing diagnostic check
 ● Conclusion and Future work: The predicted stock prices values are compared across these four companies., results and
 limitations of the model and commenting on the forward path from the project outcomes.
 
-# Few snapshots of the above methods are shown below
+# Few snapshots of the above steps are shown below
 
 ● EDA
 ![EDA](/images/EDA.PNG)
@@ -40,7 +51,3 @@ limitations of the model and commenting on the forward path from the project out
 ● Prediction results in tabluar form
 ![Prediction all ](/images/Stock-Market-forecasting_prediction_for_all_four.png)
 
-
-
-
-Format: ![Alt Text](url)
