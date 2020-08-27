@@ -1,0 +1,252 @@
+---
+title: "Time Series Analysis for target Data"
+author: "Akshay"
+date: "18/04/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(ggplot2)
+library(forecast)
+library(fpp)
+library(knitr)
+library(quantmod)
+library(timeSeries)
+library(tseries)
+library(xts)
+library(zoo)
+library(gridExtra)
+suppressMessages(library(dplyr))
+library(tidyverse)
+library(tibbletime)
+library(ggfortify)
+```
+
+
+
+```{r}
+#loading the data
+target <- read_csv("TGT.csv")
+# check for NA values
+sum(is.na(target))
+```
+
+## Plotting general time series plot and Chartseries plot as well
+
+```{r}
+#Getting close prices for the target data
+summary(target)
+sd(target$Close)
+target.close <-ts(target$Close, start = 2005, frequency = 12)
+view(target.close)
+target.close
+#plotting the general time series plot for target
+plot(target.close,main="target", sub="Stock Price Variation with respect to Time",
+  xlab="Time (in years)", ylab=" Stock Prices (in USD)",col.lab="green", cex.lab=3, type ="l")
+
+?plot
+#converting list object to time series object
+target <- ts(target)
+dates <- as.Date("2005-01","%Y/%m") + 0:180
+target <- as.xts(target, reclass=FALSE, order_by =dates)
+
+
+#data to train my models upon : 
+target.Close <- ts(target$Close, start =c(2005,01), end= c(2017,12), frequency = 12)
+
+```
+
+```{r}
+
+summary(target.close)
+sd(target.close)
+```
+
+
+## Lets decompose : the time series
+
+```{r}
+target.Close.de.add = decompose(target.Close, type = "additive")
+target.Close.de.mul = decompose(target.Close, type =  "multiplicative")
+target.close.de.add = decompose(target.close, type = "additive")
+target.close.de.mul = decompose(target.close, type =  "multiplicative")
+plot(target.Close.de.mul)
+plot(target.close.de.mul)
+
+```
+
+
+#lets convert time series into log and sqrt transformed serieses
+```{r}
+target.close.log = log(target.close)
+target.close.sqrt = sqrt(target.close) 
+target.Close.log = log(target.Close)
+target.Close.sqrt = sqrt(target.Close) 
+target.close
+plot(target.close)
+plot(target.close.log)
+plot(target.close.sqrt)
+
+```
+
+# lets perform ADF tests on these Time series
+```{r}
+adf.test(target.close)
+adf.test(target.close.log)
+adf.test(target.close.sqrt)
+```
+
+## Lets us make differenced time series
+```{r}
+dtarget.close = diff(target.close, lag=1)
+dtarget.close.log = diff(target.close.log, lag=1)
+dtarget.close.sqrt = diff(target.close.sqrt, lag=1)
+```
+
+## Lets us make differenced time series
+```{r}
+adf.test(dtarget.close )
+adf.test(dtarget.close.log) 
+adf.test(dtarget.close.sqrt) 
+```
+
+## Lets us make differenced 12 time series
+```{r}
+dtarget.close.sea = diff(target.close, lag=12)
+dtarget.close.log.sea = diff(target.close.log, lag=12)
+dtarget.close.sqrt.sea = diff(target.close.sqrt, lag=12)
+```
+
+```{r}
+library(astsa)
+acf2(dtarget.close.sea)
+
+(dtarget.close.log.sea) 
+dtarget.close.sqrt.sea 
+```
+#Lets look at ACF and PACF plots
+```{r  height = 10, width = 10}
+plot(acf(target.close), main = "ACF plot for target closing stock Prices")
+plot(acf(target.close.log))
+plot(acf(target.close.sqrt))
+plot(pacf(target.close))
+plot(pacf(target.close.log))
+plot(pacf(target.close.sqrt))
+
+```
+
+
+
+# Fitting auto.arima to get the best model
+```{r}
+target.Close.auto.arima= auto.arima(target.Close, trace = TRUE)
+#best model ARIMA(0,1,0) without drift i.e. include.drift=FALSE,
+# seasonal best model : ARIMA(0,1,0)(0,0,1)[12] with drif
+
+target.Close.log.auto.arima = auto.arima(target.Close.log, trace = TRUE)
+#best model ARIMA(0,1,0),
+#seasonal best model : ARIMA(0,1,0)(0,0,1)[12] with drift -381.8105
+
+target.Close.sqrt.auto.arima = auto.arima(target.Close.sqrt, trace = TRUE)
+#best model ARIMA(0,1,0)
+#seasonal best model : ARIMA(0,1,0)(0,0,1)[12] with drift 
+```
+
+#making all the above models
+```{r}
+target.Close.arima = Arima(target.Close, order = c(0,1,0), include.drift = FALSE )
+target.Close.arima.s = Arima(target.Close, order =c(0,1,0),include.drift = TRUE,seasonal = list(order=c(0,0,1)))
+target.Close.log.arima = Arima(target.Close.log, order = c(0,1,0), include.drift = FALSE )
+target.Close.log.arima.s = Arima(target.Close.log, order = c(0,1,0), include.drift = TRUE, seasonal = list(order=c(0,0,1)))
+target.Close.sqrt.arima = Arima(target.Close.sqrt, order = c(0,1,0), include.drift = FALSE )
+target.Close.sqrt.arima.s = Arima(target.Close.sqrt, order = c(0,1,0), include.drift = TRUE, seasonal = list(order=c(0,0,1)))
+
+```
+
+
+#lets make interactive Plots for the test data
+
+```{r}
+ftarget.Close.arima = forecast(target.Close.arima, h=24)
+ftarget.Close.arima.s = forecast(target.Close.arima.s, h=24)
+ftarget.Close.log.arima = forecast(target.Close.log.arima, h=24)
+ftarget.Close.log.arima.s = forecast(target.Close.log.arima.s, h=24)
+ftarget.Close.sqrt.arima = forecast(target.Close.sqrt.arima, h=24)
+ftarget.Close.sqrt.arima.s = forecast(target.Close.sqrt.arima.s, h=24)
+```
+
+#lets find RMS error on test set
+
+```{r}
+#Values to be predicted
+original_val <- window(target.close, start =2018)
+rmserr <- function(x,y){
+  p =x-y
+  r=sum(p^2)
+  r = r /length(x)
+  r= sqrt(r)
+  return (r)
+}
+(Etarget.Close.arima <- rmserr(ftarget.Close.arima$mean,original_val ))
+(Etarget.Close.arima.s <- rmserr(ftarget.Close.arima.s$mean,original_val))
+(Etarget.Close.log.arima. <- rmserr(exp(ftarget.Close.log.arima$mean),original_val ))
+(Etarget.Close.log.arima.s <- rmserr(exp(ftarget.Close.log.arima.s$mean),original_val))
+(Etarget.Close.sqrt.arima. <- rmserr((ftarget.Close.sqrt.arima$mean)^2,original_val ))
+(Etarget.Close.sqrt.arima.s <- rmserr((ftarget.Close.sqrt.arima.s$mean)^2,original_val))
+
+```
+
+```{r}
+
+```
+
+
+#lets see the parameters for the best model
+```{r}
+target.Close.log.arima.s
+```
+
+
+#fitting the best model for time series till 2020 and prediction for 2023
+```{r}
+target.close.log = log(target.close)
+target.close.log.arima.s = Arima(target.close.log, order = c(0,1,0), include.drift = TRUE, seasonal = list(order=c(0,0,1)))
+Ftarget.close.log.arima.s = forecast(target.close.log.arima.s,h=36)
+exp(target.close.log.arima.s$fitted)
+```
+```{r}
+exp(Ftarget.close.log.arima.s$mean)
+exp(Ftarget.close.log.arima.s$lower)
+exp(Ftarget.close.log.arima.s$upper)
+exp(Ftarget.close.log.arima.s$fitted)
+```
+```{r}
+Ftarget.close.log.arima.s$mean <- 2.718^Ftarget.close.log.arima.s$mean
+Ftarget.close.log.arima.s$lower <- 2.718^Ftarget.close.log.arima.s$lower
+Ftarget.close.log.arima.s$upper <- 2.718^Ftarget.close.log.arima.s$upper
+Ftarget.close.log.arima.s$x <- 2.718^Ftarget.close.log.arima.s$x
+Ftarget.close.log.arima.s$fitted <- 2.718^Ftarget.close.log.arima.s$fitted
+
+plot_forecast(Ftarget.close.log.arima.s, title = "Forcasting of Target Share Closing price for 2020 to 2023", Xtitle = "Year", Ytitle = "Closing Stock Price") 
+
+#%>% 
+ # plotly::layout(legend = list(x = 0.1, y = 0.95),
+  #               margin=list(l=20, r=20, t=20, b=20),
+   #              yaxis = list(linecolor = "rgb(67,67,67)"),
+    #             xaxis = list(linecolor = "rgb(67,67,67)"))
+```
+```{r}
+# Validation of the model by the ljung test 
+
+Box.test(Ftarget.close.log.arima.s$residuals, lag =12, type = "Ljung")
+
+Ftarget.close.log.arima.s$mean
+
+```
+#

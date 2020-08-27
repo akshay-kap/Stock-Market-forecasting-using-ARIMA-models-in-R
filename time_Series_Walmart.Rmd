@@ -1,0 +1,280 @@
+---
+title: "Time Series Analysis for Walmart Data"
+author: "Akshay"
+date: "18/04/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(ggplot2)
+library(forecast)
+library(fpp)
+library(knitr)
+library(quantmod)
+library(timeSeries)
+library(tseries)
+library(xts)
+library(zoo)
+library(gridExtra)
+suppressMessages(library(dplyr))
+library(tidyverse)
+library(tibbletime)
+library(ggfortify)
+```
+
+
+
+```{r}
+#loading the data
+Walmart <- read_csv("WMT.csv")
+# check for NA values
+sum(is.na(Walmart))
+```
+
+## Plotting general time series plot and Chartseries plot as well
+
+```{r}
+#Getting close prices for the walmart data
+Walmart.close <-ts(Walmart$Close, start = 2005, frequency = 12)
+summary(Walmart)
+#view(Walmart.close)
+Walmart.close
+#plotting the general time series plot for Walmart
+plot(Walmart.close,main="WALMART", sub="Stock Price Variation with respect to Time",
+  xlab="Time (in years)", ylab=" Stock Prices (in USD)",col.lab="green", cex.lab=3, type ="l")
+
+?plot
+#converting list object to time series object
+walmart <- ts(Walmart)
+dates <- as.Date("2005-01","%Y/%m") + 0:180
+walmart <- as.xts(walmart, reclass=FALSE, order_by =dates)
+
+
+#data to train my models upon : 
+Walmart.Close <- ts(Walmart$Close, start =c(2005,01), end= c(2017,12), frequency = 12)
+Walmart.Close.test <- ts(Walmart$Close, start =c(2018,01), end= c(2019,12), frequency = 12)
+
+```
+
+```{r}
+
+summary(Walmart.close)
+sd(Walmart.close)
+```
+
+
+## Lets decompose : the time series
+
+```{r}
+Walmart.Close.de.add = decompose(Walmart.Close, type = "additive")
+Walmart.Close.de.mul = decompose(Walmart.Close, type =  "multiplicative")
+Walmart.close.de.add = decompose(Walmart.close, type = "additive")
+Walmart.close.de.mul = decompose(Walmart.close, type =  "multiplicative")
+plot(Walmart.Close.de.mul)
+plot(Walmart.close.de.mul)
+
+```
+
+
+#lets convert time series into log and sqrt transformed serieses
+```{r}
+Walmart.close.log = log(Walmart.close)
+Walmart.close.sqrt = sqrt(Walmart.close) 
+Walmart.close
+plot(Walmart.close)
+plot(Walmart.close.log)
+plot(Walmart.close.sqrt)
+Walmart.Close.log = log(Walmart.Close)
+Walmart.Close.sqrt = sqrt(Walmart.Close) 
+
+```
+
+# lets perform ADF tests on these Time series
+```{r}
+adf.test(Walmart.close)
+adf.test(Walmart.close.log)
+adf.test(Walmart.close.sqrt)
+```
+
+## Lets us make differenced time series
+```{r}
+dWalmart.close = diff(Walmart.close, lag=1)
+dWalmart.close.log = diff(Walmart.close.log, lag=1)
+dWalmart.close.sqrt = diff(Walmart.close.sqrt, lag=1)
+```
+
+## Lets us make differenced time series
+```{r}
+adf.test(dWalmart.close )
+adf.test(dWalmart.close.log) 
+adf.test(dWalmart.close.sqrt) 
+plot(dWalmart.close.log, main = "Differenced logarithmic Walmart stock closing price Time Series")
+```
+
+## Lets us make differenced 12 time series
+```{r}
+dWalmart.close.sea = diff(Walmart.close, lag=12)
+dWalmart.close.log.sea = diff(Walmart.close.log, lag=12)
+dWalmart.close.sqrt.sea = diff(Walmart.close.sqrt, lag=12)
+```
+
+```{r}
+library(astsa)
+acf2(dWalmart.close.sea)
+
+plot(dWalmart.close.log.sea) 
+dWalmart.close.sqrt.sea 
+```
+#Lets look at ACF and PACF plots
+```{r  height = 10, width = 10}
+plot(acf(Walmart.close), main = "ACF plot for Walmart closing stock Prices")
+plot(acf(Walmart.close.log))
+plot(acf(Walmart.close.sqrt))
+plot(pacf(Walmart.close))
+plot(pacf(Walmart.close.log))
+plot(pacf(Walmart.close.sqrt))
+plot(acf(dWalmart.close.log), main = "ACF plot for Walmart closing stock Prices")
+plot(pacf(dWalmart.close.log), main = "PACF plot for Walmart closing stock Prices")
+```
+
+
+
+# Fitting auto.arima to get the best model
+```{r}
+Walmart.Close.auto.arima= auto.arima(Walmart.Close, trace = TRUE)
+#best model ARIMA(0,1,0) with drift i.e. include.drift=TRUE,
+# seasonal best model : ARIMA(0,1,0)(0,0,1)[12] with drif
+
+Walmart.Close.log.auto.arima = auto.arima(Walmart.Close.log, trace = TRUE)
+#best model ARIMA(0,1,0),
+#seasonal best model : ARIMA(0,1,0)(0,0,1)[12] with drift -568.5341
+
+Walmart.Close.sqrt.auto.arima = auto.arima(Walmart.Close.sqrt, trace = TRUE)
+#best model ARIMA(0,1,0)
+#seasonal best model : ARIMA(0,1,0)(0,0,1)[12] with drift 
+```
+
+#making all the above models
+```{r}
+Walmart.Close.arima = Arima(Walmart.Close, order = c(0,1,0), include.drift = TRUE )
+Walmart.Close.arima.s = Arima(Walmart.Close, order =c(0,1,0),include.drift = TRUE,seasonal = list(order=c(0,0,1)))
+Walmart.Close.log.arima = Arima(Walmart.Close.log, order = c(0,1,0), include.drift = FALSE )
+Walmart.Close.log.arima.s = Arima(Walmart.Close.log, order = c(0,1,0), include.drift = TRUE, seasonal = list(order=c(0,0,1)))
+Walmart.Close.sqrt.arima = Arima(Walmart.Close.sqrt, order = c(0,1,0), include.drift = FALSE )
+Walmart.Close.sqrt.arima.s = Arima(Walmart.Close.sqrt, order = c(0,1,0), include.drift = TRUE, seasonal = list(order=c(0,0,1)))
+
+```
+
+
+#lets make interactive Plots for the test data
+
+```{r}
+fWalmart.Close.arima = forecast(Walmart.Close.arima, h=24)
+fWalmart.Close.arima.s = forecast(Walmart.Close.arima.s, h=24)
+fWalmart.Close.log.arima = forecast(Walmart.Close.log.arima, h=24)
+fWalmart.Close.log.arima.s = forecast(Walmart.Close.log.arima.s, h=24)
+fWalmart.Close.sqrt.arima = forecast(Walmart.Close.sqrt.arima, h=24)
+fWalmart.Close.sqrt.arima.s = forecast(Walmart.Close.sqrt.arima.s, h=24)
+```
+
+#lets find RMS error on test set
+
+```{r}
+#Values to be predicted
+original_val <- window(Walmart.close, start =2018)
+rmserr <- function(x,y){
+  p =x-y
+  r=sum(p^2)
+  r = r /length(x)
+  r= sqrt(r)
+  return (r)
+}
+(EWalmart.Close.arima <- rmserr(fWalmart.Close.arima$mean,original_val ))
+(EWalmart.Close.arima.s <- rmserr(fWalmart.Close.arima.s$mean,original_val))
+(EWalmart.Close.log.arima. <- rmserr(exp(fWalmart.Close.log.arima$mean),original_val ))
+(EWalmart.Close.log.arima.s <- rmserr(exp(fWalmart.Close.log.arima.s$mean),original_val))
+(EWalmart.Close.sqrt.arima. <- rmserr((fWalmart.Close.sqrt.arima$mean)^2,original_val ))
+(EWalmart.Close.sqrt.arima.s <- rmserr((fWalmart.Close.sqrt.arima.s$mean)^2,original_val))
+
+```
+
+```{r}
+
+```
+
+
+#lets see the parameters for the best model
+```{r}
+Walmart.Close.log.arima.s
+```
+
+```{r}
+fWalmart.Close.log.arima.s$mean <- 2.718^fWalmart.Close.log.arima.s$mean
+fWalmart.Close.log.arima.s$lower <- 2.718^fWalmart.Close.log.arima.s$lower
+fWalmart.Close.log.arima.s$upper <- 2.718^fWalmart.Close.log.arima.s$upper
+fWalmart.Close.log.arima.s$x <- 2.718^fWalmart.Close.log.arima.s$x
+fWalmart.Close.log.arima.s$fitted <- 2.718^fWalmart.Close.log.arima.s$fitted
+
+test_forecast(forecast.obj = fWalmart.Close.log.arima.s, actual = Walmart.close, test = Walmart.Close.test, Xgrid = TRUE, Ygrid = TRUE) %>%
+  plotly::layout(legend = list(x = 0.1, y = 0.95), 
+                 title = "Comparision of Predicted and Actual Closing Value of 2018 and 19",
+                 yaxis = list(linecolor = "rgb(67,67,67)"),
+                 xaxis = list(linecolor = "rgb(67,67,67)"))
+```
+
+#fitting the best model for time series till 2020 and prediction for 2023
+```{r}
+Walmart.close.log = log(Walmart.close)
+Walmart.close.log.arima.s = Arima(Walmart.close.log, order = c(0,1,0), include.drift = TRUE, seasonal = list(order=c(0,0,1)))
+FWalmart.close.log.arima.s = forecast(Walmart.close.log.arima.s,h=36)
+exp(Walmart.close.log.arima.s$fitted)
+```
+```{r}
+exp(FWalmart.close.log.arima.s$mean)
+exp(FWalmart.close.log.arima.s$lower)
+exp(FWalmart.close.log.arima.s$upper)
+exp(FWalmart.close.log.arima.s$fitted)
+```
+```{r}
+# Forcasting the Data
+FWalmart.close.log.arima.s$mean <- 2.718^FWalmart.close.log.arima.s$mean
+FWalmart.close.log.arima.s$lower <- 2.718^FWalmart.close.log.arima.s$lower
+FWalmart.close.log.arima.s$upper <- 2.718^FWalmart.close.log.arima.s$upper
+FWalmart.close.log.arima.s$x <- 2.718^FWalmart.close.log.arima.s$x
+FWalmart.close.log.arima.s$fitted <- 2.718^FWalmart.close.log.arima.s$fitted
+
+plot_forecast(FWalmart.close.log.arima.s, title = "Forcasting of Walmart Share Closing price for 2020 to 2023", Xtitle = "Year", Ytitle = "Closing Stock Price")
+
+#%>% 
+#  plotly::layout(legend = list(x = 0.1, y = 0.95),
+ #                margin=list(l=20, r=20, t=20, b=20),
+  #               yaxis = list(linecolor = "rgb(67,67,67)"),
+   #              xaxis = list(linecolor = "rgb(67,67,67)"))
+
+
+```
+```{r}
+# Validation of the model by the ljung test 
+
+Box.test(FWalmart.close.log.arima.s$residuals, lag =12, type = "Ljung")
+
+
+```
+```{r}
+# Confedence interval ofthe 
+
+confint(Walmart.close.log.arima.s)
+FWalmart.close.log.arima.s$mean 
+
+```
+#
+```{r}
+ggtsdiag(Walmart.close.log.arima.s)
+
+```

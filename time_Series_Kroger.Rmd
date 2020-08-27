@@ -1,0 +1,240 @@
+---
+title: "Time Series Analysis for kroger Data"
+author: "Akshay"
+date: "18/04/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(ggplot2)
+library(forecast)
+library(fpp)
+library(knitr)
+library(quantmod)
+library(timeSeries)
+library(tseries)
+library(xts)
+library(zoo)
+library(gridExtra)
+suppressMessages(library(dplyr))
+library(tidyverse)
+library(tibbletime)
+library(ggfortify)
+```
+
+
+
+```{r}
+#loading the data
+kroger <- read_csv("KR.csv")
+# check for NA values
+sum(is.na(kroger))
+```
+
+## Plotting general time series plot and Chartseries plot as well
+
+```{r}
+#Getting close prices for the kroger data
+summary(kroger)
+sd(kroger$Close)
+kroger.close <-ts(kroger$Close, start = 2005, frequency = 12)
+#view(kroger.close)
+kroger.close
+#plotting the general time series plot for kroger
+plot(kroger.close,main="kroger", sub="Stock Price Variation with respect to Time",
+  xlab="Time (in years)", ylab=" Stock Prices (in USD)",col.lab="green", cex.lab=3, type ="l")
+
+?plot
+#converting list object to time series object
+kroger <- ts(kroger)
+dates <- as.Date("2005-01","%Y/%m") + 0:180
+kroger <- as.xts(kroger, reclass=FALSE, order_by =dates)
+
+
+#data to train my models upon : 
+kroger.Close <- ts(kroger$Close, start =c(2005,01), end= c(2017,12), frequency = 12)
+
+```
+
+```{r}
+
+summary(kroger.close)
+sd(kroger.close)
+```
+
+
+## Lets decompose : the time series
+
+```{r}
+kroger.Close.de.add = decompose(kroger.Close, type = "additive")
+kroger.Close.de.mul = decompose(kroger.Close, type =  "multiplicative")
+kroger.close.de.add = decompose(kroger.close, type = "additive")
+kroger.close.de.mul = decompose(kroger.close, type =  "multiplicative")
+plot(kroger.Close.de.mul)
+plot(kroger.close.de.mul)
+
+```
+
+
+#lets convert time series into log and sqrt transformed serieses
+```{r}
+kroger.close.log = log(kroger.close)
+kroger.close.sqrt = sqrt(kroger.close) 
+kroger.Close.log = log(kroger.Close)
+kroger.Close.sqrt = sqrt(kroger.Close) 
+kroger.close
+plot(kroger.close)
+plot(kroger.close.log)
+plot(kroger.close.sqrt)
+
+```
+
+# lets perform ADF tests on these Time series
+```{r}
+adf.test(kroger.close)
+adf.test(kroger.close.log)
+adf.test(kroger.close.sqrt)
+```
+
+## Lets us make differenced time series
+```{r}
+dkroger.close = diff(kroger.close, lag=1)
+dkroger.close.log = diff(kroger.close.log, lag=1)
+dkroger.close.sqrt = diff(kroger.close.sqrt, lag=1)
+```
+
+## Lets us make differenced time series
+```{r}
+adf.test(dkroger.close )
+adf.test(dkroger.close.log) 
+adf.test(dkroger.close.sqrt) 
+```
+
+## Lets us make differenced 12 time series
+```{r}
+dkroger.close.sea = diff(kroger.close, lag=12)
+dkroger.close.log.sea = diff(kroger.close.log, lag=12)
+dkroger.close.sqrt.sea = diff(kroger.close.sqrt, lag=12)
+```
+
+```{r}
+library(astsa)
+acf2(dkroger.close.sea)
+
+(dkroger.close.log.sea) 
+dkroger.close.sqrt.sea 
+```
+#Lets look at ACF and PACF plots
+```{r  height = 10, width = 10}
+plot(acf(kroger.close), main = "ACF plot for kroger closing stock Prices")
+plot(acf(kroger.close.log))
+plot(acf(kroger.close.sqrt))
+plot(pacf(kroger.close))
+plot(pacf(kroger.close.log))
+plot(pacf(kroger.close.sqrt))
+
+```
+
+
+
+# Fitting auto.arima to get the best model
+```{r}
+kroger.Close.auto.arima= auto.arima(kroger.Close, trace = TRUE)
+#best model ARIMA(0,1,0) without drift i.e. include.drift=FALSE,
+# seasonal best model : ARIMA(0,1,0)(0,0,1)[12] with drift 552.0378
+
+kroger.Close.log.auto.arima = auto.arima(kroger.Close.log, trace = TRUE)
+#best model ARIMA(1,1,1), with drift = -411.2681
+#seasonal best model : ARIMA(1,1,1)(0,0,1)[12] with drift = -404.947 
+
+kroger.Close.sqrt.auto.arima = auto.arima(kroger.Close.sqrt, trace = TRUE)
+#best model ARIMA(1,1,1) = -160.08
+#seasonal best model : ARIMA(0,1,0)(0,0,1)[12] with drift = -153.205
+```
+
+#making all the above models
+```{r}
+kroger.Close.arima = Arima(kroger.Close, order = c(0,1,0), include.drift = FALSE )
+kroger.Close.arima.s = Arima(kroger.Close, order =c(0,1,0),include.drift = TRUE,seasonal = list(order=c(0,0,1)))
+kroger.Close.log.arima = Arima(kroger.Close.log, order = c(1,1,1), include.drift = TRUE )
+kroger.Close.log.arima.s = Arima(kroger.Close.log, order = c(1,1,1), include.drift = TRUE, seasonal = list(order=c(0,0,1)))
+kroger.Close.sqrt.arima = Arima(kroger.Close.sqrt, order = c(1,1,1), include.drift = FALSE )
+kroger.Close.sqrt.arima.s = Arima(kroger.Close.sqrt, order = c(0,1,0), include.drift = TRUE, seasonal = list(order=c(0,0,1)))
+
+```
+
+
+#lets make interactive Plots for the test data
+
+```{r}
+fkroger.Close.arima = forecast(kroger.Close.arima, h=24)
+fkroger.Close.arima.s = forecast(kroger.Close.arima.s, h=24)
+fkroger.Close.log.arima = forecast(kroger.Close.log.arima, h=24)
+fkroger.Close.log.arima.s = forecast(kroger.Close.log.arima.s, h=24)
+fkroger.Close.sqrt.arima = forecast(kroger.Close.sqrt.arima, h=24)
+fkroger.Close.sqrt.arima.s = forecast(kroger.Close.sqrt.arima.s, h=24)
+```
+
+#lets find RMS error on test set
+
+```{r}
+#Values to be predicted
+original_val <- window(kroger.close, start =2018)
+rmserr <- function(x,y){
+  p =x-y
+  r=sum(p^2)
+  r = r /length(x)
+  r= sqrt(r)
+  return (r)
+}
+(Ekroger.Close.arima <- rmserr(fkroger.Close.arima$mean,original_val ))
+(Ekroger.Close.arima.s <- rmserr(fkroger.Close.arima.s$mean,original_val))
+(Ekroger.Close.log.arima. <- rmserr(exp(fkroger.Close.log.arima$mean),original_val ))
+(Ekroger.Close.log.arima.s <- rmserr(exp(fkroger.Close.log.arima.s$mean),original_val))
+(Ekroger.Close.sqrt.arima. <- rmserr((fkroger.Close.sqrt.arima$mean)^2,original_val ))
+(Ekroger.Close.sqrt.arima.s <- rmserr((fkroger.Close.sqrt.arima.s$mean)^2,original_val))
+
+```
+
+```{r}
+
+```
+
+
+#lets see the parameters for the best model
+```{r}
+kroger.Close.arima.s
+```
+
+
+#fitting the best model for time series till 2020 and prediction for 2023
+```{r}
+kroger.close.arima.s = Arima(kroger.close, order = c(0,1,0), include.drift = TRUE, seasonal = list(order=c(0,0,1)))
+Fkroger.close.arima.s = forecast(kroger.close.arima.s,h=36)
+```
+
+```{r}
+
+plot_forecast(Fkroger.close.arima.s, title = "Forcasting of Kroger Share Closing price for 2020 to 2023", Xtitle = "Year", Ytitle = "Closing Stock Price")
+```
+```{r}
+# Validation of the model by the ljung test 
+
+Box.test(Fkroger.close.arima.s$residuals, lag =12, type = "Ljung")
+```
+
+
+```{r}
+# Confedence interval ofthe 
+
+confint(kroger.close.arima.s)
+
+Fkroger.close.arima.s$mean
+```
+#

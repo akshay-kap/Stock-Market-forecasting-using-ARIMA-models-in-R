@@ -1,0 +1,271 @@
+---
+title: "Time Series Analysis for costco Data"
+author: "Akshay"
+date: "18/04/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(ggplot2)
+library(forecast)
+library(fpp)
+library(knitr)
+library(quantmod)
+library(timeSeries)
+library(tseries)
+library(xts)
+library(zoo)
+library(gridExtra)
+suppressMessages(library(dplyr))
+library(tidyverse)
+library(tibbletime)
+library(ggfortify)
+```
+
+
+
+```{r}
+#loading the data
+costco <- read_csv("COST.csv")
+# check for NA values
+sum(is.na(costco))
+```
+
+## Plotting general time series plot and Chartseries plot as well
+
+```{r}
+#Getting close prices for the costco data
+summary(costco)
+sd(costco$Close)
+costco.close <-ts(costco$Close, start = 2005, frequency = 12)
+#view(costco.close)
+costco.close
+#plotting the general time series plot for costco
+plot(costco.close,main="costco", sub="Stock Price Variation with respect to Time",
+  xlab="Time (in years)", ylab=" Stock Prices (in USD)",col.lab="green", cex.lab=3, type ="l")
+
+?plot
+#converting list object to time series object
+costco <- ts(costco)
+dates <- as.Date("2005-01","%Y/%m") + 0:180
+costco <- as.xts(costco, reclass=FALSE, order_by =dates)
+
+
+#data to train my models upon : 
+costco.Close <- ts(costco$Close, start =c(2005,01), end= c(2017,12), frequency = 12)
+costco.Close.test <- ts(costco$Close, start =c(2018,01), end= c(2019,12), frequency = 12)
+```
+
+```{r}
+
+summary(costco.close)
+sd(costco.close)
+```
+
+
+## Lets decompose : the time series
+
+```{r}
+costco.Close.de.add = decompose(costco.Close, type = "additive")
+costco.Close.de.mul = decompose(costco.Close, type =  "multiplicative")
+costco.close.de.add = decompose(costco.close, type = "additive")
+costco.close.de.mul = decompose(costco.close, type =  "multiplicative")
+plot(costco.Close.de.mul)
+plot(costco.close.de.mul)
+
+```
+
+
+#lets convert time series into log and sqrt transformed serieses
+```{r}
+costco.close.log = log(costco.close)
+costco.close.sqrt = sqrt(costco.close) 
+costco.Close.log = log(costco.Close)
+costco.Close.sqrt = sqrt(costco.Close) 
+costco.close
+plot(costco.close)
+plot(costco.close.log)
+plot(costco.close.sqrt)
+
+```
+
+# lets perform ADF tests on these Time series
+```{r}
+adf.test(costco.close)
+adf.test(costco.close.log)
+adf.test(costco.close.sqrt)
+```
+
+## Lets us make differenced time series
+```{r}
+dcostco.close = diff(costco.close, lag=1)
+dcostco.close.log = diff(costco.close.log, lag=1)
+dcostco.close.sqrt = diff(costco.close.sqrt, lag=1)
+```
+
+## Lets us make differenced time series
+```{r}
+adf.test(dcostco.close )
+adf.test(dcostco.close.log) 
+adf.test(dcostco.close.sqrt) 
+```
+
+## Lets us make differenced 12 time series
+```{r}
+dcostco.close.sea = diff(costco.close, lag=12)
+dcostco.close.log.sea = diff(costco.close.log, lag=12)
+dcostco.close.sqrt.sea = diff(costco.close.sqrt, lag=12)
+```
+
+```{r}
+library(astsa)
+acf2(dcostco.close.sea)
+
+(dcostco.close.log.sea) 
+dcostco.close.sqrt.sea 
+```
+#Lets look at ACF and PACF plots
+```{r  height = 10, width = 10}
+plot(acf(costco.close), main = "ACF plot for costco closing stock Prices")
+plot(acf(costco.close.log))
+plot(acf(costco.close.sqrt))
+plot(pacf(costco.close))
+plot(pacf(costco.close.log))
+plot(pacf(costco.close.sqrt))
+
+```
+
+
+
+# Fitting auto.arima to get the best model
+```{r}
+costco.Close.auto.arima= auto.arima(costco.Close, trace = TRUE)
+#best model ARIMA(1,1,1) with drift i.e. include.drift=TRUE,
+# seasonal best model : ARIMA(1,1,1)(0,0,1)[12] with drif 951
+
+costco.Close.log.auto.arima = auto.arima(costco.Close.log, trace = TRUE)
+#best model ARIMA(0,1,0),
+#seasonal best model : ARIMA(0,1,0)(2,0,0)[12] with drift -463.86
+
+costco.Close.sqrt.auto.arima = auto.arima(costco.Close.sqrt, trace = TRUE)
+#best model ARIMA(0,1,0)with drift
+#seasonal best model : ARIMA(0,1,0)(0,0,1)[12] with drift = 13.49
+```
+
+#making all the above models
+```{r}
+costco.Close.arima = Arima(costco.Close, order = c(1,1,1), include.drift = TRUE )
+costco.Close.arima.s = Arima(costco.Close, order =c(1,1,1),include.drift = TRUE,seasonal = list(order=c(0,0,1)))
+costco.Close.log.arima = Arima(costco.Close.log, order = c(0,1,0), include.drift = FALSE )
+costco.Close.log.arima.s = Arima(costco.Close.log, order = c(0,1,0), include.drift = TRUE, seasonal = list(order=c(2,0,0)))
+costco.Close.sqrt.arima = Arima(costco.Close.sqrt, order = c(0,1,0), include.drift = TRUE )
+costco.Close.sqrt.arima.s = Arima(costco.Close.sqrt, order = c(0,1,0), include.drift = TRUE, seasonal = list(order=c(0,0,1)))
+
+```
+
+
+#lets make interactive Plots for the test data
+
+```{r}
+fcostco.Close.arima = forecast(costco.Close.arima, h=24)
+fcostco.Close.arima.s = forecast(costco.Close.arima.s, h=24)
+fcostco.Close.log.arima = forecast(costco.Close.log.arima, h=24)
+fcostco.Close.log.arima.s = forecast(costco.Close.log.arima.s, h=24)
+fcostco.Close.sqrt.arima = forecast(costco.Close.sqrt.arima, h=24)
+fcostco.Close.sqrt.arima.s = forecast(costco.Close.sqrt.arima.s, h=24)
+```
+
+#lets find RMS error on test set
+
+```{r}
+#Values to be predicted
+original_val <- window(costco.close, start =2018)
+rmserr <- function(x,y){
+  p =x-y
+  r=sum(p^2)
+  r = r /length(x)
+  r= sqrt(r)
+  return (r)
+}
+(Ecostco.Close.arima <- rmserr(fcostco.Close.arima$mean,original_val ))
+(Ecostco.Close.arima.s <- rmserr(fcostco.Close.arima.s$mean,original_val))
+(Ecostco.Close.log.arima. <- rmserr(exp(fcostco.Close.log.arima$mean),original_val ))
+(Ecostco.Close.log.arima.s <- rmserr(exp(fcostco.Close.log.arima.s$mean),original_val))
+(Ecostco.Close.sqrt.arima. <- rmserr((fcostco.Close.sqrt.arima$mean)^2,original_val ))
+(Ecostco.Close.sqrt.arima.s <- rmserr((fcostco.Close.sqrt.arima.s$mean)^2,original_val))
+
+```
+
+```{r}
+fcostco.Close.log.arima.s$mean <- 2.718^fcostco.Close.log.arima.s$mean
+fcostco.Close.log.arima.s$lower <- 2.718^fcostco.Close.log.arima.s$lower
+fcostco.Close.log.arima.s$upper <- 2.718^fcostco.Close.log.arima.s$upper
+fcostco.Close.log.arima.s$x <- 2.718^fcostco.Close.log.arima.s$x
+fcostco.Close.log.arima.s$fitted <- 2.718^fcostco.Close.log.arima.s$fitted
+
+test_forecast(forecast.obj = fcostco.Close.log.arima.s, actual = costco.close, test = costco.Close.test, Xgrid = TRUE, Ygrid = TRUE) %>%
+  plotly::layout(legend = list(x = 0.1, y = 0.95), 
+                 title = "Comparision of Predicted and Actual Closing Value of 2018 and 19",
+                 yaxis = list(linecolor = "rgb(67,67,67)"),
+                 xaxis = list(linecolor = "rgb(67,67,67)"))
+```
+
+
+#lets see the parameters for the best model
+```{r}
+costco.Close.log.arima.s
+```
+
+
+#fitting the best model for time series till 2020 and prediction for 2023
+```{r}
+costco.close.log = log(costco.close)
+costco.close.log.arima.s = Arima(costco.close.log, order = c(0,1,0), include.drift = TRUE, seasonal = list(order=c(0,0,1)))
+Fcostco.close.log.arima.s = forecast(costco.close.log.arima.s,h=36)
+exp(costco.close.log.arima.s$fitted)
+```
+```{r}
+exp(Fcostco.close.log.arima.s$mean)
+exp(Fcostco.close.log.arima.s$lower)
+exp(Fcostco.close.log.arima.s$upper)
+exp(Fcostco.close.log.arima.s$fitted)
+```
+```{r}
+
+Fcostco.close.log.arima.s$mean <- 2.718^Fcostco.close.log.arima.s$mean
+Fcostco.close.log.arima.s$lower <- 2.718^Fcostco.close.log.arima.s$lower
+Fcostco.close.log.arima.s$upper <- 2.718^Fcostco.close.log.arima.s$upper
+Fcostco.close.log.arima.s$x <- 2.718^Fcostco.close.log.arima.s$x
+Fcostco.close.log.arima.s$fitted <- 2.718^Fcostco.close.log.arima.s$fitted
+
+plot_forecast(Fcostco.close.log.arima.s, title = "Forcasting of Costco Share Closing price for 2020 to 2023", Xtitle = "Year", Ytitle = "Closing Stock Price") 
+
+#%>% 
+ # plotly::layout(legend = list(x = 0.1, y = 0.95),
+  #               margin=list(l=20, r=20, t=20, b=20),
+   #              yaxis = list(linecolor = "rgb(67,67,67)"),
+    #             xaxis = list(linecolor = "rgb(67,67,67)"))
+
+
+```
+```{r}
+# Validation of the model by the ljung test 
+
+Box.test(Fcostco.close.log.arima.s$residuals, lag =12, type = "Ljung")
+
+
+```
+#
+```{r}
+# Confedence interval ofthe 
+
+confint(costco.close.log.arima.s)
+Fcostco.close.log.arima.s$mean
+
+```
