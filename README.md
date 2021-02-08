@@ -9,10 +9,10 @@ stock prices.
 ● The extarcted data for Kroger can be found in : Kroggers_data.csv <br>
 ● The extarcted data for Target can be found in : Target_data.csv <br>
 
-● [The RMD file for Walmart can be found here] (time_Series_Walmart.Rmd) <br>
-● [The RMD file for Costco can be found here] (`time_Series_Costco.Rmd`) <br>
-● [The RMD file for Kroger can be found in here] (`time_Series_Kroggers.Rmd`) <br>
-● [The RMD file for for Target can be found here] (`time_Series_Target.Rmd`) <br>
+● [`The RMD file for Walmart can be found here`] (time_Series_Walmart.Rmd) <br>
+● [`The RMD file for Costco can be found here`] (time_Series_Costco.Rmd) <br>
+● [`The RMD file for Kroger can be found in here`] (time_Series_Kroggers.Rmd) <br>
+● [`The RMD file for for Target can be found here`] (time_Series_Target.Rmd) <br>
 
 
 (Refer the report Project_final.pdf for complete explaination of each steps and conclusion reached, please go through appendix to understand the analysis completely)
