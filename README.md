@@ -1,14 +1,14 @@
 ## Stock forecasting for retail giants using ARIMA models in R
 
-The project aims to compare the standing of Walmart, Costco, Kroger and Target by analysing the trends in monthly closing stock prices for these
+- The project aims to compare the standing of Walmart, Costco, Kroger and Target by analysing the trends in monthly closing stock prices for these
 organizations and to predict the future price values using Autoregressive Integrated Moving Average (ARIMA) models for these
 stock prices.
 
 
-● [`The RMD file for Walmart can be found here`](time_Series_Walmart.Rmd) and [`CSV Data File here`](Walmart_data.csv) <br>
-● [`The RMD file for Costco can be found here`](time_Series_Costco.Rmd) and [`CSV Data File here`](Costco_data.csv) <br>
-● [`The RMD file for Kroger can be found in here`](time_Series_Kroggers.Rmd) and [`CSV Data File here`](Kroggers_data.csv) <br>
-● [`The RMD file for Target can be found here`](time_Series_Target.Rmd) and [`CSV Data File here`](Target_data.csv)<br>
+  ● [`The RMD file for Walmart can be found here`](time_Series_Walmart.Rmd) and [`CSV Data File here`](Walmart_data.csv) <br>
+  ● [`The RMD file for Costco can be found here`](time_Series_Costco.Rmd) and [`CSV Data File here`](Costco_data.csv) <br>
+  ● [`The RMD file for Kroger can be found in here`](time_Series_Kroggers.Rmd) and [`CSV Data File here`](Kroggers_data.csv) <br>
+  ● [`The RMD file for Target can be found here`](time_Series_Target.Rmd) and [`CSV Data File here`](Target_data.csv)<br>
 
 
 (Refer the report Project_final.pdf for complete explaination of each steps and conclusion reached, please go through appendix to understand the analysis completely)
