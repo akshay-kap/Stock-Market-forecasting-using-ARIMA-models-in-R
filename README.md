@@ -18,7 +18,7 @@ stock prices.
 tidy data format which is manipulated for further analysis. <br>
 ● Exploratory data analysis: Visual analysis of data pattern and central tendency statistics are observed along with a
 background information for each of these retail players. <br>
-● Decomposition: Understanding basic time series components by decomposing it into fundamental time series properties.
+● Decomposition: Understanding basic time series components by decomposing it into fundamental time series properties.<br>
 ● Transforming data: Data is transformed using mathematical techniques to make variance stable,i.e. preparing it for better
 fits ARIMA models.  <br>
 ● Stationarity and ACF, PACF plots: Determining data stationarity, plotting ACF and PACF plots to get an intuition for ARIMA
